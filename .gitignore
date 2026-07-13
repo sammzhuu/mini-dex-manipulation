@@ -1,0 +1,16 @@
+*.pdf
+CLAUDE.md
+docs/
+ruvector.db
+agentdb.rvf*
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# ROS2 build output
+ros2_bridge/ws/build/
+ros2_bridge/ws/install/
+ros2_bridge/ws/log/

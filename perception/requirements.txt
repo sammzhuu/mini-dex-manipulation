@@ -4,3 +4,4 @@ mujoco==2.3.7
 numpy==1.26.4
 jsonschema==4.22.0
 pytest==8.2.2
+scipy==1.11.4

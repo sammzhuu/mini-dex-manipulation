@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RolloutResult",
+  "type": "object",
+  "required": ["task", "policy_id", "episodes", "summary", "video_path"],
+  "properties": {
+    "task": {"type": "string"},
+    "policy_id": {"type": "string"},
+    "episodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["episode_id", "success", "total_reward", "length", "final_object_pose"],
+        "properties": {
+          "episode_id": {"type": "integer", "minimum": 0},
+          "success": {"type": "boolean"},
+          "total_reward": {"type": "number"},
+          "length": {"type": "integer", "minimum": 0},
+          "final_object_pose": {
+            "type": "object",
+            "required": ["position", "orientation"],
+            "properties": {
+              "position": {
+                "type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3
+              },
+              "orientation": {
+                "type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4
+              }
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["success_rate", "mean_reward", "mean_episode_length", "num_episodes"],
+      "properties": {
+        "success_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "mean_reward": {"type": "number"},
+        "mean_episode_length": {"type": "number"},
+        "num_episodes": {"type": "integer", "minimum": 0}
+      }
+    },
+    "video_path": {"type": "string"}
+  }
+}

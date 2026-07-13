@@ -1,0 +1,13 @@
+{
+  "frame_id": 0,
+  "timestamp": 0.033,
+  "camera": {"width": 128, "height": 128, "fov_deg": 45},
+  "detections": [
+    {
+      "object_id": "target_object",
+      "position": [0.10, 0.20, 0.30],
+      "orientation": [0.0, 0.0, 0.0, 1.0],
+      "confidence": 0.93
+    }
+  ]
+}

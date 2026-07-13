@@ -1,0 +1,43 @@
+{
+  "task": "AdroitHandRelocateSparse-v1",
+  "policy_id": "fixture_placeholder",
+  "episodes": [
+    {
+      "episode_id": 0,
+      "success": true,
+      "total_reward": 12.4,
+      "length": 150,
+      "final_object_pose": {
+        "position": [0.10, 0.20, 0.30],
+        "orientation": [0.0, 0.0, 0.0, 1.0]
+      }
+    },
+    {
+      "episode_id": 1,
+      "success": false,
+      "total_reward": 3.1,
+      "length": 200,
+      "final_object_pose": {
+        "position": [0.05, 0.35, 0.28],
+        "orientation": [0.0, 0.0, 0.05, 0.999]
+      }
+    },
+    {
+      "episode_id": 2,
+      "success": true,
+      "total_reward": 14.7,
+      "length": 132,
+      "final_object_pose": {
+        "position": [0.12, 0.18, 0.31],
+        "orientation": [0.0, 0.01, 0.0, 0.9999]
+      }
+    }
+  ],
+  "summary": {
+    "success_rate": 0.67,
+    "mean_reward": 10.07,
+    "mean_episode_length": 160.7,
+    "num_episodes": 3
+  },
+  "video_path": "sim_policy/artifacts/demo.mp4"
+}

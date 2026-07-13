@@ -21,6 +21,7 @@ setup(
         "console_scripts": [
             "capture_node = mini_dex_bridge.capture_node:main",
             "policy_node = mini_dex_bridge.policy_node:main",
+            "replay = mini_dex_bridge.replay:main",
         ],
     },
 )

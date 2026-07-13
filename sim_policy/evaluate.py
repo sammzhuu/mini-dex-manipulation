@@ -5,16 +5,28 @@ from pathlib import Path
 import gymnasium as gym
 import gymnasium_robotics
 from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 gym.register_envs(gymnasium_robotics)
 
-TASK_ID = "AdroitHandRelocateSparse-v1"
+TASK_ID = "AdroitHandRelocate-v1"
 ARTIFACTS_DIR = Path(__file__).parent / "artifacts"
 
 
-def evaluate(model_path: Path, num_episodes: int, policy_id: str) -> dict:
+def evaluate(model_path: Path, vecnormalize_path: Path, num_episodes: int, policy_id: str) -> dict:
     env = gym.make(TASK_ID)
     model = PPO.load(model_path)
+
+    # The policy was trained on normalized observations (see train.py's
+    # VecNormalize wrapper). Load the saved running stats onto a throwaway
+    # DummyVecEnv just to reuse VecNormalize.normalize_obs()/.load() — the
+    # actual episode rollout below still uses the raw (non-vec) `env` so the
+    # existing per-episode seeding and terminated/truncated loop are
+    # untouched. training=False freezes the stats; norm_reward=False so the
+    # reward we log is the real environment reward, not the training signal.
+    vecnorm = VecNormalize.load(str(vecnormalize_path), DummyVecEnv([lambda: gym.make(TASK_ID)]))
+    vecnorm.training = False
+    vecnorm.norm_reward = False
 
     episodes = []
     for episode_id in range(num_episodes):
@@ -22,28 +34,23 @@ def evaluate(model_path: Path, num_episodes: int, policy_id: str) -> dict:
         total_reward = 0.0
         length = 0
         terminated = truncated = False
+        success = False
         while not (terminated or truncated):
-            action, _ = model.predict(obs, deterministic=True)
+            norm_obs = vecnorm.normalize_obs(obs)
+            action, _ = model.predict(norm_obs, deterministic=True)
             obs, reward, terminated, truncated, info = env.step(action)
             total_reward += float(reward)
             length += 1
-        success = bool(info.get("success", total_reward > 0))
-        # This installed gymnasium-robotics version's Adroit "Object" joint is a
-        # 6-DOF OBJTx/Ty/Tz + OBJRx/Ry/Rz joint, not the classic 7-DOF quaternion
-        # free joint — there is no 4-element quaternion in qpos to slice. Use the
-        # body's global xpos/xquat instead, which is always a proper quaternion
-        # regardless of the joint's own parameterization.
+            success = bool(info.get("success", success))
         obj_id = env.unwrapped.model.body("Object").id
-        position = env.unwrapped.data.xpos[obj_id].tolist()
-        orientation = env.unwrapped.data.xquat[obj_id].tolist()
         episodes.append({
             "episode_id": episode_id,
             "success": success,
             "total_reward": total_reward,
             "length": length,
             "final_object_pose": {
-                "position": position,
-                "orientation": orientation,
+                "position": env.unwrapped.data.xpos[obj_id].tolist(),
+                "orientation": env.unwrapped.data.xquat[obj_id].tolist(),
             },
         })
     env.close()
@@ -69,11 +76,12 @@ def evaluate(model_path: Path, num_episodes: int, policy_id: str) -> dict:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=Path, default=ARTIFACTS_DIR / "ppo_v1.zip")
+    parser.add_argument("--vecnormalize", type=Path, default=ARTIFACTS_DIR / "vecnormalize.pkl")
     parser.add_argument("--episodes", type=int, default=25)
     parser.add_argument("--policy-id", default="ppo_v1")
     args = parser.parse_args()
 
-    result = evaluate(args.model, args.episodes, args.policy_id)
+    result = evaluate(args.model, args.vecnormalize, args.episodes, args.policy_id)
     out_path = ARTIFACTS_DIR / "rollout.json"
     out_path.write_text(json.dumps(result, indent=2))
     print(f"Wrote {out_path}")

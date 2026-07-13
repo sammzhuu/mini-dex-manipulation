@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>mini_dex_bridge</name>
+  <version>0.0.1</version>
+  <description>Mini-Dex FDE toolkit ROS2 bridge: capture and policy-command nodes over JSON topics</description>
+  <maintainer email="zjiale1118@gmail.com">Samuel Zhu</maintainer>
+  <license>MIT</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

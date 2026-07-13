@@ -26,7 +26,7 @@ This is an active work in progress, not a finished product. Current state, hones
 
 | Component | Status |
 |---|---|
-| `sim_policy` | Environment verified and working; PPO training not yet run — no trained policy or metrics yet |
+| `sim_policy` | PPO trained on `AdroitHandRelocate-v1` (dense reward + `VecNormalize`, 1.5M timesteps, ~3.7h on CPU); `rollout.json` + `demo.mp4` exported and schema-validated. Mean reward improved from -20 (the original 200k-timestep `AdroitHandRelocateSparse-v1` MVP run) to +30, but **success rate is still 0% over 25 eval episodes** — the policy learns to approach and lift the object but hasn't reliably crossed the goal-distance success threshold within the 200-step episode budget |
 | `perception` | Environment set up; core capture/pose-estimation module not yet implemented |
 | `ros2_bridge` | MVP complete: package builds via `colcon` with no errors; capture, policy, and replay nodes implemented and running; pure-logic tests passing (`pytest`, no Docker needed); live capture→policy topic flow and single-command replay both verified end-to-end inside Docker |
 | `ops_dashboard` | Data-loading and report-generation logic implemented and unit-tested (all passing); Streamlit UI written, pending a manual run-through |

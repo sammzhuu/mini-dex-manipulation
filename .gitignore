@@ -14,3 +14,8 @@ __pycache__/
 ros2_bridge/ws/build/
 ros2_bridge/ws/install/
 ros2_bridge/ws/log/
+
+# In case colcon build gets run from the repo root instead of ros2_bridge/ws/
+/build/
+/install/
+/log/

@@ -1,10 +1,10 @@
 # Mini-Dex — Simulated Dexterous Manipulation PoC Toolkit
 
-A simulated, end-to-end toolkit for deploying a dexterous-manipulation policy the way a forward-deployed robotics engineer would package one for a customer proof-of-concept — a trained policy, a perception "capture system," a robotics-middleware bridge, and internal ops tooling — built entirely in simulation, with zero physical hardware.
+A simulated, end-to-end toolkit for deploying a dexterous-manipulation policy the way a forward-deployed robotics engineer would package one for a customer proof-of-concept. A trained policy, a perception "capture system," a robotics-middleware bridge, and internal ops tooling; built entirely in simulation, with zero physical hardware.
 
-## Why
+## Why Build?
 
-Robotics foundation models don't ship value on their own — someone has to wrap them with the perception, middleware, and internal tooling a real deployment needs: sensor capture, robot integration, monitoring, and reporting back to the people who built the model. This project is a portfolio piece built around that idea, inspired by forward-deployed robotics engineering roles that sit between research and customer-facing deployment. It intentionally isn't a research project — it's the scaffolding an FDE actually builds around one.
+Robotics foundation models don't ship value on their own; someone has to wrap them with the perception, middleware, and internal tooling a real deployment needs: sensor capture, robot integration, monitoring, and reporting back to the people who built the model. This project is a piece built around that idea, inspired by forward-deployed robotics engineering roles that sit between research and customer-facing deployment.
 
 ## Demo
 

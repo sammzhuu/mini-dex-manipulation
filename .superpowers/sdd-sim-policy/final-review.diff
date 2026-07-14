@@ -1,0 +1,256 @@
+# Final whole-branch review: sim_policy lane
+
+## Commits (sim_policy-scoped)
+ba3d0ed feat(sim_policy): add env setup and smoke test
+8009cb7 feat(sim_policy): add PPO training script
+aea561f feat(sim_policy): add evaluation script and rollout schema test
+b3f88b1 feat(sim_policy): add demo video recording script
+
+## Files changed
+ sim_policy/.gitignore                   |  1 +
+ sim_policy/env_check.py                 | 19 ++++++++
+ sim_policy/evaluate.py                  | 79 +++++++++++++++++++++++++++++++++
+ sim_policy/record_demo.py               | 34 ++++++++++++++
+ sim_policy/requirements.txt             |  7 +++
+ sim_policy/tests/test_rollout_schema.py | 24 ++++++++++
+ sim_policy/train.py                     | 31 +++++++++++++
+ 7 files changed, 195 insertions(+)
+
+## Diff
+diff --git a/sim_policy/.gitignore b/sim_policy/.gitignore
+new file mode 100644
+index 0000000..d4f588e
+--- /dev/null
++++ b/sim_policy/.gitignore
+@@ -0,0 +1 @@
++artifacts/
+diff --git a/sim_policy/env_check.py b/sim_policy/env_check.py
+new file mode 100644
+index 0000000..de6c46d
+--- /dev/null
++++ b/sim_policy/env_check.py
+@@ -0,0 +1,19 @@
++import gymnasium as gym
++import gymnasium_robotics
++
++gym.register_envs(gymnasium_robotics)
++
++TASK_ID = "AdroitHandRelocateSparse-v1"
++
++
++def main():
++    env = gym.make(TASK_ID)
++    obs, info = env.reset(seed=0)
++    action = env.action_space.sample()
++    obs, reward, terminated, truncated, info = env.step(action)
++    print("env OK, obs shape:", obs.shape, "action shape:", action.shape)
++    env.close()
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/sim_policy/evaluate.py b/sim_policy/evaluate.py
+new file mode 100644
+index 0000000..c40b869
+--- /dev/null
++++ b/sim_policy/evaluate.py
+@@ -0,0 +1,79 @@
++import argparse
++import json
++from pathlib import Path
++
++import gymnasium as gym
++import gymnasium_robotics
++from stable_baselines3 import PPO
++
++gym.register_envs(gymnasium_robotics)
++
++TASK_ID = "AdroitHandRelocateSparse-v1"
++ARTIFACTS_DIR = Path(__file__).parent / "artifacts"
++
++
++def evaluate(model_path: Path, num_episodes: int, policy_id: str) -> dict:
++    env = gym.make(TASK_ID)
++    model = PPO.load(model_path)
++
++    episodes = []
++    for episode_id in range(num_episodes):
++        obs, info = env.reset(seed=episode_id)
++        total_reward = 0.0
++        length = 0
++        terminated = truncated = False
++        while not (terminated or truncated):
++            action, _ = model.predict(obs, deterministic=True)
++            obs, reward, terminated, truncated, info = env.step(action)
++            total_reward += float(reward)
++            length += 1
++        success = bool(info.get("success", total_reward > 0))
++        # This installed gymnasium-robotics version's Adroit "Object" joint is a
++        # 6-DOF OBJTx/Ty/Tz + OBJRx/Ry/Rz joint, not the classic 7-DOF quaternion
++        # free joint — there is no 4-element quaternion in qpos to slice. Use the
++        # body's global xpos/xquat instead, which is always a proper quaternion
++        # regardless of the joint's own parameterization.
++        obj_id = env.unwrapped.model.body("Object").id
++        position = env.unwrapped.data.xpos[obj_id].tolist()
++        orientation = env.unwrapped.data.xquat[obj_id].tolist()
++        episodes.append({
++            "episode_id": episode_id,
++            "success": success,
++            "total_reward": total_reward,
++            "length": length,
++            "final_object_pose": {
++                "position": position,
++                "orientation": orientation,
++            },
++        })
++    env.close()
++
++    success_rate = sum(e["success"] for e in episodes) / len(episodes)
++    mean_reward = sum(e["total_reward"] for e in episodes) / len(episodes)
++    mean_length = sum(e["length"] for e in episodes) / len(episodes)
++
++    return {
++        "task": TASK_ID,
++        "policy_id": policy_id,
++        "episodes": episodes,
++        "summary": {
++            "success_rate": success_rate,
++            "mean_reward": mean_reward,
++            "mean_episode_length": mean_length,
++            "num_episodes": len(episodes),
++        },
++        "video_path": "sim_policy/artifacts/demo.mp4",
++    }
++
++
++if __name__ == "__main__":
++    parser = argparse.ArgumentParser()
++    parser.add_argument("--model", type=Path, default=ARTIFACTS_DIR / "ppo_v1.zip")
++    parser.add_argument("--episodes", type=int, default=25)
++    parser.add_argument("--policy-id", default="ppo_v1")
++    args = parser.parse_args()
++
++    result = evaluate(args.model, args.episodes, args.policy_id)
++    out_path = ARTIFACTS_DIR / "rollout.json"
++    out_path.write_text(json.dumps(result, indent=2))
++    print(f"Wrote {out_path}")
+diff --git a/sim_policy/record_demo.py b/sim_policy/record_demo.py
+new file mode 100644
+index 0000000..ef83a74
+--- /dev/null
++++ b/sim_policy/record_demo.py
+@@ -0,0 +1,34 @@
++from pathlib import Path
++
++import gymnasium as gym
++import gymnasium_robotics
++import imageio
++from stable_baselines3 import PPO
++
++gym.register_envs(gymnasium_robotics)
++
++TASK_ID = "AdroitHandRelocateSparse-v1"
++ARTIFACTS_DIR = Path(__file__).parent / "artifacts"
++
++
++def record(model_path: Path, out_path: Path, seed: int = 0, fps: int = 30) -> Path:
++    env = gym.make(TASK_ID, render_mode="rgb_array")
++    model = PPO.load(model_path)
++
++    obs, info = env.reset(seed=seed)
++    frames = [env.render()]
++    terminated = truncated = False
++    while not (terminated or truncated):
++        action, _ = model.predict(obs, deterministic=True)
++        obs, reward, terminated, truncated, info = env.step(action)
++        frames.append(env.render())
++    env.close()
++
++    imageio.mimsave(out_path, frames, fps=fps)
++    return out_path
++
++
++if __name__ == "__main__":
++    ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
++    path = record(ARTIFACTS_DIR / "ppo_v1.zip", ARTIFACTS_DIR / "demo.mp4")
++    print(f"Saved video to {path}")
+diff --git a/sim_policy/requirements.txt b/sim_policy/requirements.txt
+new file mode 100644
+index 0000000..dee4c35
+--- /dev/null
++++ b/sim_policy/requirements.txt
+@@ -0,0 +1,7 @@
++gymnasium==1.3.0
++gymnasium-robotics==1.4.2
++mujoco==3.10.0
++stable-baselines3==2.9.0
++imageio[ffmpeg]==2.34.1
++jsonschema==4.26.0
++pytest==9.1.1
+diff --git a/sim_policy/tests/test_rollout_schema.py b/sim_policy/tests/test_rollout_schema.py
+new file mode 100644
+index 0000000..91e9619
+--- /dev/null
++++ b/sim_policy/tests/test_rollout_schema.py
+@@ -0,0 +1,24 @@
++import json
++from pathlib import Path
++
++import jsonschema
++import pytest
++
++REPO_ROOT = Path(__file__).resolve().parents[2]
++SCHEMA_PATH = REPO_ROOT / "shared" / "schema" / "rollout_schema.json"
++FIXTURE_PATH = REPO_ROOT / "shared" / "fixtures" / "rollout.json"
++
++
++def test_fixture_matches_schema():
++    schema = json.loads(SCHEMA_PATH.read_text())
++    fixture = json.loads(FIXTURE_PATH.read_text())
++    jsonschema.validate(instance=fixture, schema=schema)
++
++
++def test_generated_rollout_matches_schema():
++    generated_path = REPO_ROOT / "sim_policy" / "artifacts" / "rollout.json"
++    if not generated_path.exists():
++        pytest.skip("run evaluate.py first to generate artifacts/rollout.json")
++    schema = json.loads(SCHEMA_PATH.read_text())
++    generated = json.loads(generated_path.read_text())
++    jsonschema.validate(instance=generated, schema=schema)
+diff --git a/sim_policy/train.py b/sim_policy/train.py
+new file mode 100644
+index 0000000..96c298e
+--- /dev/null
++++ b/sim_policy/train.py
+@@ -0,0 +1,31 @@
++import argparse
++from pathlib import Path
++
++import gymnasium as gym
++import gymnasium_robotics
++from stable_baselines3 import PPO
++from stable_baselines3.common.env_util import make_vec_env
++
++gym.register_envs(gymnasium_robotics)
++
++TASK_ID = "AdroitHandRelocateSparse-v1"
++ARTIFACTS_DIR = Path(__file__).parent / "artifacts"
++
++
++def train(total_timesteps: int, seed: int = 0) -> Path:
++    ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
++    vec_env = make_vec_env(TASK_ID, n_envs=4, seed=seed)
++    model = PPO("MlpPolicy", vec_env, verbose=1, seed=seed)
++    model.learn(total_timesteps=total_timesteps)
++    model_path = ARTIFACTS_DIR / "ppo_v1.zip"
++    model.save(model_path)
++    return model_path
++
++
++if __name__ == "__main__":
++    parser = argparse.ArgumentParser()
++    parser.add_argument("--timesteps", type=int, default=200_000)
++    parser.add_argument("--seed", type=int, default=0)
++    args = parser.parse_args()
++    path = train(args.timesteps, args.seed)
++    print(f"Saved model to {path}")

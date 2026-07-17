@@ -5,3 +5,4 @@ stable-baselines3==2.9.0
 imageio[ffmpeg]==2.34.1
 jsonschema==4.26.0
 pytest==9.1.1
+minari[hf,hdf5]==0.5.3

@@ -41,7 +41,11 @@ def evaluate(model_path: Path, vecnormalize_path: Path, num_episodes: int, polic
             obs, reward, terminated, truncated, info = env.step(action)
             total_reward += float(reward)
             length += 1
-            success = bool(info.get("success", success))
+            # Sticky: the env's info["success"] reflects only the current
+            # step's distance-to-target, so without OR-ing it in, an episode
+            # that reaches the target and then drifts away before the 200-
+            # step limit would be recorded as a failure despite succeeding.
+            success = success or bool(info["success"])
         obj_id = env.unwrapped.model.body("Object").id
         episodes.append({
             "episode_id": episode_id,
